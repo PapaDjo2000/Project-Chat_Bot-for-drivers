@@ -17,6 +17,17 @@ type UserRequest struct {
 	Backload           int     // обратные тонны
 }
 
+type VitalData struct {
+	Undelivery        float64
+	OperatingDistance int
+	Wastage           float64
+	Lifting           float64
+	Underfuel         float64
+	TotalFuel         float64
+	DailyRun          int
+	DailyRate         float64
+}
+
 func (ur *UserRequest) SetConsumption(cons float64) (float64, error) {
 	if cons <= 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -24,6 +35,7 @@ func (ur *UserRequest) SetConsumption(cons float64) (float64, error) {
 	ur.Consumption = cons
 	return ur.Consumption, nil
 }
+
 func (ur *UserRequest) SetCapacity(cap int) (int, error) {
 	if cap <= 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -31,6 +43,7 @@ func (ur *UserRequest) SetCapacity(cap int) (int, error) {
 	ur.Capacity = cap
 	return ur.Capacity, nil
 }
+
 func (ur *UserRequest) SetFuelResidue(fr float64) (float64, error) {
 	if fr < 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -38,6 +51,7 @@ func (ur *UserRequest) SetFuelResidue(fr float64) (float64, error) {
 	ur.FuelResidue = fr
 	return ur.FuelResidue, nil
 }
+
 func (ur *UserRequest) SetSpeedometerResidue(spr int) (int, error) {
 	if spr < 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -61,6 +75,7 @@ func (ur *UserRequest) SetDistance(dis int) (int, error) {
 	ur.Distance = dis
 	return ur.Distance, nil
 }
+
 func (ur *UserRequest) SetQuantityTrips(qt int) (int, error) {
 	if qt <= 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -68,6 +83,7 @@ func (ur *UserRequest) SetQuantityTrips(qt int) (int, error) {
 	ur.QuantityTrips = qt
 	return ur.QuantityTrips, nil
 }
+
 func (ur *UserRequest) SetTons(ton int) (int, error) {
 	if ton <= 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -75,6 +91,7 @@ func (ur *UserRequest) SetTons(ton int) (int, error) {
 	ur.Tons = ton
 	return ur.Tons, nil
 }
+
 func (ur *UserRequest) SetBackload(dton int) (int, error) {
 	if dton < 0 {
 		return 0, fmt.Errorf("invalid consumption value")
@@ -83,25 +100,27 @@ func (ur *UserRequest) SetBackload(dton int) (int, error) {
 	return ur.Backload, nil
 }
 
-func (ur *UserRequest) Сalculations() (int, float64) {
-	undelivery := float64(ur.Capacity - ur.Tons)                                                    //недотонны
-	operatingDistance := ur.Distance * 2 * ur.QuantityTrips                                         // Пройденное расстояние за день
-	wastage := roundTo(float64(operatingDistance)*float64(ur.Consumption/100), 1)                   // Расход топлива на эти километры
-	lifting := float64(ur.QuantityTrips) * 0.5                                                      // Подъемы
-	underfuel := roundTo(float64(undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // Расход топлива на недовоз
-	totalFuel := roundTo(wastage+lifting-underfuel, 1)                                              // Общий расход топлива
-	dailyRate := roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-totalFuel, 1)                   // Расход на день с учетом заправки
-	dailyRun := ur.SpeedometerResidue + operatingDistance                                           // Пробег за день
+func (ur *UserRequest) Сalculations() VitalData {
+	var vd VitalData
+
+	vd.Undelivery = float64(ur.Capacity - ur.Tons)                                                       //недотонны
+	vd.OperatingDistance = ur.Distance * 2 * ur.QuantityTrips                                            // Пройденное расстояние за день
+	vd.Wastage = roundTo(float64(vd.OperatingDistance)*float64(ur.Consumption/100), 1)                   // Расход топлива на эти километры
+	vd.Lifting = float64(ur.QuantityTrips) * 0.5                                                         // Подъемы
+	vd.Underfuel = roundTo(float64(vd.Undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // Расход топлива на недовоз
+	vd.TotalFuel = roundTo(vd.Wastage+vd.Lifting-vd.Underfuel, 1)                                        // Общий расход топлива
+	vd.DailyRate = roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-vd.TotalFuel, 1)                   // Расход на день с учетом заправки
+	vd.DailyRun = ur.SpeedometerResidue + vd.OperatingDistance                                           // Пробег за день
 
 	if ur.Backload > 0 {
-		lifting = 2 * float64(ur.QuantityTrips) * 0.5                                                  // Подъемы
-		undelivery = math.Max(0, float64(ur.Tons+ur.Backload-ur.Capacity))                             // перевоз тонн
-		underfuel = roundTo(float64(undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // расход топлива за день
-		totalFuel = roundTo(wastage+lifting+underfuel, 1)                                              // общий расход топлива
-		dailyRate = roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-totalFuel, 1)                   // расход на день с учетом заправки
+		vd.Lifting = 2 * float64(ur.QuantityTrips) * 0.5                                                     // Подъемы
+		vd.Undelivery = math.Max(0, float64(ur.Tons+ur.Backload-ur.Capacity))                                // перевоз тонн
+		vd.Underfuel = roundTo(float64(vd.Undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // расход топлива за день
+		vd.TotalFuel = roundTo(vd.Wastage+vd.Lifting+vd.Underfuel, 1)                                        // общий расход топлива
+		vd.DailyRate = roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-vd.TotalFuel, 1)                   // расход на день с учетом заправки
 	}
 
-	return dailyRun, dailyRate
+	return vd
 }
 
 func roundTo(value float64, places int) float64 {
