@@ -20,15 +20,15 @@ type UserRequest struct {
 }
 
 type VitalData struct {
-	UserId            uuid.UUID `json:"user_id"`
-	Undelivery        float64   `json:"undelivery  "`
-	OperatingDistance int       `json:"operatingdistance"`
-	Wastage           float64   `json:"wastage"`
-	Lifting           float64   `json:"lifting"`
-	Underfuel         float64   `json:"underfuel"`
-	TotalFuel         float64   `json:"totalfuel"`
-	DailyRun          int       `json:"dailyrun"`
-	DailyRate         float64   `json:"dailyrate"`
+	UserId            uuid.UUID
+	Undelivery        float64
+	OperatingDistance int
+	Wastage           float64
+	Lifting           float64
+	Underfuel         float64
+	TotalFuel         float64
+	DailyRun          int
+	DailyRate         float64
 }
 
 func (ur *UserRequest) SetConsumption(cons float64) (float64, error) {
