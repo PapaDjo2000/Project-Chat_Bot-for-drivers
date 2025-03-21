@@ -8,7 +8,7 @@ import (
 
 type (
 	Users interface {
-		LoadByChatID(ctx context.Context, chatID int)
-		CreateUser(ctx context.Context, user models.Users)
+		GetByChatID(ctx context.Context, chatID int64) (*models.Users, error)
+		Create(ctx context.Context, user models.Users) error
 	}
 )
