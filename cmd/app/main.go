@@ -17,10 +17,7 @@ import (
 // @GetMyChatID_BestBot
 
 // THIS VALUES SHOULD BE IN CONFIG/ENV FILE
-const (
-	apiKey      = "7686022156:AAHpISLuOFWkUksQBLcUGfx0dEiggcBs-OA"
-	adminChatID = 524060834
-)
+
 
 func main() {
 
