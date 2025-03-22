@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/bot"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/users"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
 
 	"github.com/rs/zerolog"
 )
@@ -18,12 +20,35 @@ import (
 
 // THIS VALUES SHOULD BE IN CONFIG/ENV FILE
 
-
 func main() {
-
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
+	if token == "" {
+		log.Fatalf("TELEGRAM_BOT_TOKEN is not set")
+		return
+	}
+	adminChatIDStr := os.Getenv("ADMIN_CHAT_ID")
+	if adminChatIDStr == "" {
+		log.Fatalf("ADMIN_CHAT_ID is not set")
+		return
+	}
+	adminChatID, err := strconv.ParseInt(adminChatIDStr, 10, 64)
+	if err != nil {
+		log.Fatalf("Failed to parse ADMIN_CHAT_ID: %v\n", err)
+		return
+	}
+	if err != nil {
+		log.Fatalf("Failed to parse ADMIN_CHAT_ID: %v", err)
+	}
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
 
-	db, err := sql.Open("postgres", "user=your_user password=your_password dbname=your_db sslmode=disable")
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
+		dbUser, dbPassword, dbName, dbHost, dbPort)
+
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
@@ -32,7 +57,7 @@ func main() {
 	ctx := context.Background()
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
-	usersCollection := collections.Users.CreateUser(ctx)
+	usersCollection := postgres.NewUserStorage(db)
 	usersProcessor := users.NewProcessor(logger, usersCollection)
 
 	tgBot, err := bot.New(token, logger, usersProcessor)
