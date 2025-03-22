@@ -1,4 +1,4 @@
-package main
+package businesslayer
 
 import (
 	"fmt"
@@ -17,6 +17,7 @@ type UserRequest struct {
 	QuantityTrips      int     // количество рейсов
 	Tons               int     // тоны
 	Backload           int     // обратные тонны
+	Lifting            float64 // подьемы
 }
 
 type VitalData struct {
@@ -103,13 +104,21 @@ func (ur *UserRequest) SetBackload(dton int) (int, error) {
 	return ur.Backload, nil
 }
 
+func (ur *UserRequest) SetLifting(lif int) (int, error) {
+	if lif < 0 {
+		return 0, fmt.Errorf("invalid consumption value")
+	}
+	ur.Backload = lif
+	return ur.Backload, nil
+}
+
 func (ur *UserRequest) Сalculations() VitalData {
 	var vd VitalData
 
 	vd.Undelivery = float64(ur.Capacity - ur.Tons)                                                       //недотонны
 	vd.OperatingDistance = ur.Distance * 2 * ur.QuantityTrips                                            // Пройденное расстояние за день
 	vd.Wastage = roundTo(float64(vd.OperatingDistance)*float64(ur.Consumption/100), 1)                   // Расход топлива на эти километры
-	vd.Lifting = float64(ur.QuantityTrips) * 0.5                                                         // Подъемы
+	vd.Lifting = float64(ur.QuantityTrips) * ur.Lifting                                                  // Подъемы
 	vd.Underfuel = roundTo(float64(vd.Undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // Расход топлива на недовоз
 	vd.TotalFuel = roundTo(vd.Wastage+vd.Lifting-vd.Underfuel, 1)                                        // Общий расход топлива
 	vd.DailyRate = roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-vd.TotalFuel, 1)                   // Расход на день с учетом заправки

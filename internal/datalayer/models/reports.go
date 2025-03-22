@@ -7,8 +7,8 @@ import (
 )
 
 type Reports struct {
-	Id       uuid.UUID
-	User_id  uuid.UUID
+	ID       uuid.UUID
+	UserID   uuid.UUID
 	Date     time.Time
 	Request  string
 	Response string

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/businesslayer"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/businesslayer/dto"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/dto"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
@@ -72,7 +72,7 @@ func (p *Processor) Listen(ctx context.Context) error {
 					continue
 				}
 				// приветствие
-				if err := p.SendMessage(update.Message.Chat.ID, fmt.Sprintf("Привет, %s!", update.Message.Chat.UserName)); err != nil {
+				if err := p.SendMessage(update.Message.Chat.ID, fmt.Sprintf("Привет %s!", update.Message.Chat.UserName)); err != nil {
 					p.logger.Err(err).Send()
 				}
 			case "work":

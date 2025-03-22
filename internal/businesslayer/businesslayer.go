@@ -1,8 +1,9 @@
 package businesslayer
 
 import (
-	"Project-Chat_Bot-for-drivers/interanl/businesslayer/dto"
 	"context"
+
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/dto"
 )
 
 type (

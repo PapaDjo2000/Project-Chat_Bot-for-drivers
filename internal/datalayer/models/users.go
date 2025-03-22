@@ -5,8 +5,8 @@ import (
 )
 
 type Users struct {
-	Id      uuid.UUID
-	Name    string
-	Chat_id int
-	Active  bool
+	ID     uuid.UUID
+	Name   string
+	ChatID int64
+	Active bool
 }

@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"log"
 	"os"
 
-	"Project-Chat_Bot-for-drivergithub.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/datalayer/collections/cache"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/businesslayer/domain/bot"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/businesslayer/domain/users"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/bot"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/users"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
 
 	"github.com/rs/zerolog"
 )
@@ -16,15 +18,20 @@ import (
 
 // THIS VALUES SHOULD BE IN CONFIG/ENV FILE
 const (
-	apiKey      = "8008625848:AAFQ-xFfdNo7KS3cBM0JBqbNvS-bDEmDkzI"
-	adminChatID = 401631302
+	apiKey      = "7686022156:AAHpISLuOFWkUksQBLcUGfx0dEiggcBs-OA"
+	adminChatID = 524060834
 )
 
 func main() {
+	db, err := sql.Open("postgres", "user=your_user password=your_password dbname=your_db sslmode=disable")
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	defer db.Close()
 	ctx := context.Background()
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
-	usersCollection := cache.NewUsersCollection()
+	usersCollection := postgres.NewUserStorage()
 	usersProcessor := users.NewProcessor(logger, usersCollection)
 
 	tgBot, err := bot.New(apiKey, logger, usersProcessor)

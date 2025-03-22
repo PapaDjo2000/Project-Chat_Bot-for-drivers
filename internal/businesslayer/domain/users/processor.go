@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/businesslayer/dto"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/datalayer/collections"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/interanl/datalayer/models"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/dto"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
@@ -22,19 +22,20 @@ func NewProcessor(logger zerolog.Logger, usersCollection collections.Users) *Pro
 }
 
 func (p *Processor) CreateIfNotExist(ctx context.Context, userRequest dto.User) error {
-	user, err := p.usersCollection.GetByChatID(ctx, userRequest.ChatID)
+	user, err := p.usersCollection.GetUserByChatID(ctx, userRequest.ChatID)
 	if err != nil {
 		p.logger.Err(err).Send()
 		return err
 	}
 
 	if user == nil {
-		if err := p.usersCollection.Create(
+		if err := p.usersCollection.CreateUser(
 			ctx,
-			models.Users{
+			&models.Users{
 				ID:     uuid.New(),
 				Name:   userRequest.Name,
 				ChatID: userRequest.ChatID,
+				Active: true,
 			},
 		); err != nil {
 			p.logger.Err(err).Send()
@@ -46,7 +47,7 @@ func (p *Processor) CreateIfNotExist(ctx context.Context, userRequest dto.User) 
 }
 
 func (p *Processor) LoadByChatID(ctx context.Context, chatID int64) (*dto.User, error) {
-	user, err := p.usersCollection.GetByChatID(ctx, chatID)
+	user, err := p.usersCollection.GetUserByChatID(ctx, chatID)
 	if err != nil {
 		p.logger.Err(err).Send()
 		return nil, err
