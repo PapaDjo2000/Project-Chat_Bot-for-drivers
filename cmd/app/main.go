@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/bot"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/users"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections"
 
@@ -23,6 +22,13 @@ const (
 )
 
 func main() {
+
+	token := os.Getenv("TELEGRAM_BOT_TOKEN")
+	bot, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		log.Fatalf("failed to create bot: %v", err)
+	}
+
 	db, err := sql.Open("postgres", "user=your_user password=your_password dbname=your_db sslmode=disable")
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
@@ -35,7 +41,7 @@ func main() {
 	usersCollection := collections.Users.CreateUser(ctx)
 	usersProcessor := users.NewProcessor(logger, usersCollection)
 
-	tgBot, err := bot.New(apiKey, logger, usersProcessor)
+	tgBot, err := bot.New(token, logger, usersProcessor)
 	if err != nil {
 		logger.Err(err).Send()
 
