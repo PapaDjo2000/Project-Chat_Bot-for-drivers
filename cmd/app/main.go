@@ -8,7 +8,7 @@ import (
 
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/bot"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/users"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections"
 
 	"github.com/rs/zerolog"
 )
@@ -28,10 +28,11 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
 	ctx := context.Background()
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
-	usersCollection := postgres.NewUserStorage()
+	usersCollection := collections.Users.CreateUser(ctx)
 	usersProcessor := users.NewProcessor(logger, usersCollection)
 
 	tgBot, err := bot.New(apiKey, logger, usersProcessor)
