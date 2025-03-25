@@ -8,5 +8,5 @@ type Users struct {
 	ID     uuid.UUID
 	Name   string
 	ChatID int64
-	Active bool
+	Role   int
 }

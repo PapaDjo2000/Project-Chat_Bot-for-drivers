@@ -1,8 +1,7 @@
-package businesslayer
+package dto
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/google/uuid"
 )
@@ -110,32 +109,4 @@ func (ur *UserRequest) SetLifting(lif int) (int, error) {
 	}
 	ur.Backload = lif
 	return ur.Backload, nil
-}
-
-func (ur *UserRequest) Сalculations() VitalData {
-	var vd VitalData
-
-	vd.Undelivery = float64(ur.Capacity - ur.Tons)                                                       //недотонны
-	vd.OperatingDistance = ur.Distance * 2 * ur.QuantityTrips                                            // Пройденное расстояние за день
-	vd.Wastage = roundTo(float64(vd.OperatingDistance)*float64(ur.Consumption/100), 1)                   // Расход топлива на эти километры
-	vd.Lifting = float64(ur.QuantityTrips) * ur.Lifting                                                  // Подъемы
-	vd.Underfuel = roundTo(float64(vd.Undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // Расход топлива на недовоз
-	vd.TotalFuel = roundTo(vd.Wastage+vd.Lifting-vd.Underfuel, 1)                                        // Общий расход топлива
-	vd.DailyRate = roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-vd.TotalFuel, 1)                   // Расход на день с учетом заправки
-	vd.DailyRun = ur.SpeedometerResidue + vd.OperatingDistance                                           // Пробег за день
-
-	if ur.Backload > 0 {
-		vd.Lifting = 2 * float64(ur.QuantityTrips) * 0.5                                                     // Подъемы
-		vd.Undelivery = math.Max(0, float64(ur.Tons+ur.Backload-ur.Capacity))                                // перевоз тонн
-		vd.Underfuel = roundTo(float64(vd.Undelivery)*float64(ur.QuantityTrips)*float64(ur.Distance)/100, 1) // расход топлива за день
-		vd.TotalFuel = roundTo(vd.Wastage+vd.Lifting+vd.Underfuel, 1)                                        // общий расход топлива
-		vd.DailyRate = roundTo(float64(ur.FuelResidue)+float64(ur.Refuel)-vd.TotalFuel, 1)                   // расход на день с учетом заправки
-	}
-
-	return vd
-}
-
-func roundTo(value float64, places int) float64 {
-	factor := math.Pow(10, float64(places))
-	return math.Round(value*factor) / factor
 }

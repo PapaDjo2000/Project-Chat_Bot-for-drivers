@@ -35,7 +35,7 @@ func (p *Processor) CreateIfNotExist(ctx context.Context, userRequest dto.User) 
 				ID:     uuid.New(),
 				Name:   userRequest.Name,
 				ChatID: userRequest.ChatID,
-				Active: true,
+				Role:   0,
 			},
 		); err != nil {
 			p.logger.Err(err).Send()

@@ -6,4 +6,5 @@ type User struct {
 	ID     uuid.UUID
 	Name   string
 	ChatID int64
+	Role   int
 }

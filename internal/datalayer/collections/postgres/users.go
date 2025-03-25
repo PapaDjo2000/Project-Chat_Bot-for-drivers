@@ -19,10 +19,10 @@ func NewUserStorage(db *sql.DB) *UserStorage {
 }
 
 // GetUserByID получает пользователя по ID.
-func (s *UserStorage) GetUserByID(ctx context.Context, id string) (*models.Users, error) {
+func (s *UserStorage) GetUserByChatID(ctx context.Context, id string) (*models.Users, error) {
 	var user models.Users
 	query := `SELECT id, name, chat_id, active FROM pr.users WHERE id = $1`
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Name, &user.ChatID, &user.Active)
+	err := s.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Name, &user.ChatID, &user.Role)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user with id %s not found", id)
@@ -38,7 +38,7 @@ func (s *UserStorage) CreateUser(ctx context.Context, user *models.Users) error 
         INSERT INTO pr.users (id, name, chat_id, active)
         VALUES ($1, $2, $3, $4)
     `
-	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID, user.Active)
+	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID, user.Role)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
@@ -52,7 +52,7 @@ func (s *UserStorage) UpdateUser(ctx context.Context, user *models.Users) error 
         SET name = $2, chat_id = $3, active = $4
         WHERE id = $1
     `
-	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID, user.Active)
+	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID, user.Role)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
