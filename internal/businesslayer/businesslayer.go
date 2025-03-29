@@ -18,6 +18,6 @@ type (
 		Work(userName string) string
 	}
 	Executor interface {
-		Executor() dto.VitalData
+		Calculate(UserRequest dto.UserRequest) dto.VitalData
 	}
 )

@@ -31,82 +31,44 @@ type VitalData struct {
 	DailyRate         float64
 }
 
-func (ur *UserRequest) SetConsumption(cons float64) (float64, error) {
-	if cons <= 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Consumption = cons
-	return ur.Consumption, nil
+func NewVitalData() *VitalData {
+	return &VitalData{}
 }
 
-func (ur *UserRequest) SetCapacity(cap int) (int, error) {
-	if cap <= 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Capacity = cap
-	return ur.Capacity, nil
-}
+func (v *VitalData) ToString(UserRequest UserRequest) string {
+	return fmt.Sprintf(
+		"Результаты расчета:\n"+
+			"Недотонны: %.1f\n"+
+			"Пройденное расстояние за день: %d км\n"+
+			"Расход топлива: %.1f л\n"+
+			"Подъемы: %.1f л\n"+
+			"Расход топлива на недовоз: %.1f л\n"+
+			"Общий расход топлива: %.1f л\n"+
+			"Остаток топлива на конец дня: %.1f л\n"+
+			"Пробег на конец дня: %d км\n"+
+			`=================
+			%v*%2.f=%1.f
+			%v*%1.f=%1.f
+			%1.f*%v*%v/100=%1.f
+			=================`,
+		v.Undelivery,
+		v.OperatingDistance, // остаётся int
+		v.Wastage,
+		v.Lifting,
+		v.Underfuel,
+		v.TotalFuel,
+		v.DailyRate,
+		v.DailyRun, // остаётся int
+		v.OperatingDistance,
+		UserRequest.Consumption,
+		v.Wastage,
+		UserRequest.QuantityTrips,
+		UserRequest.Lifting,
+		v.Lifting,
+		v.Undelivery,
+		UserRequest.QuantityTrips,
+		UserRequest.Distance,
+		v.Underfuel,
+	)
 
-func (ur *UserRequest) SetFuelResidue(fr float64) (float64, error) {
-	if fr < 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.FuelResidue = fr
-	return ur.FuelResidue, nil
-}
-
-func (ur *UserRequest) SetSpeedometerResidue(spr int) (int, error) {
-	if spr < 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.SpeedometerResidue = spr
-	return ur.SpeedometerResidue, nil
-}
-
-func (ur *UserRequest) SetRefuel(ref int) (int, error) {
-	if ref < 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Refuel = ref
-	return ur.Refuel, nil
-}
-
-func (ur *UserRequest) SetDistance(dis int) (int, error) {
-	if dis < 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Distance = dis
-	return ur.Distance, nil
-}
-
-func (ur *UserRequest) SetQuantityTrips(qt int) (int, error) {
-	if qt <= 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.QuantityTrips = qt
-	return ur.QuantityTrips, nil
-}
-
-func (ur *UserRequest) SetTons(ton int) (int, error) {
-	if ton <= 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Tons = ton
-	return ur.Tons, nil
-}
-
-func (ur *UserRequest) SetBackload(dton int) (int, error) {
-	if dton < 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Backload = dton
-	return ur.Backload, nil
-}
-
-func (ur *UserRequest) SetLifting(lif int) (int, error) {
-	if lif < 0 {
-		return 0, fmt.Errorf("invalid consumption value")
-	}
-	ur.Backload = lif
-	return ur.Backload, nil
 }

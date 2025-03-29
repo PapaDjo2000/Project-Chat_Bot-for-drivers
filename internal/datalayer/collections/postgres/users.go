@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
@@ -19,13 +20,13 @@ func NewUserStorage(db *sql.DB) *UserStorage {
 }
 
 // GetUserByID получает пользователя по ID.
-func (s *UserStorage) GetUserByChatID(ctx context.Context, id string) (*models.Users, error) {
+func (s *UserStorage) GetUserByChatID(ctx context.Context, id int64) (*models.Users, error) {
 	var user models.Users
-	query := `SELECT id, name, chat_id, active FROM pr.users WHERE id = $1`
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Name, &user.ChatID, &user.Role)
+	query := `SELECT id, name, chat_id FROM pr.users WHERE Chat_ID = $1`
+	err := s.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Name, &user.ChatID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user with id %s not found", id)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -35,10 +36,10 @@ func (s *UserStorage) GetUserByChatID(ctx context.Context, id string) (*models.U
 // CreateUser создает нового пользователя.
 func (s *UserStorage) CreateUser(ctx context.Context, user *models.Users) error {
 	query := `
-        INSERT INTO pr.users (id, name, chat_id, active)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO pr.users (id, name, chat_id)
+        VALUES ($1, $2, $3)
     `
-	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID, user.Role)
+	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
@@ -49,10 +50,10 @@ func (s *UserStorage) CreateUser(ctx context.Context, user *models.Users) error 
 func (s *UserStorage) UpdateUser(ctx context.Context, user *models.Users) error {
 	query := `
         UPDATE pr.users
-        SET name = $2, chat_id = $3, active = $4
+        SET name = $2, chat_id = $3
         WHERE id = $1
     `
-	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID, user.Role)
+	_, err := s.db.ExecContext(ctx, query, user.ID, user.Name, user.ChatID)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
@@ -60,7 +61,7 @@ func (s *UserStorage) UpdateUser(ctx context.Context, user *models.Users) error 
 }
 
 // DeleteUser удаляет пользователя по ID.
-func (s *UserStorage) DeleteUser(ctx context.Context, id string) error {
+func (s *UserStorage) DeleteUser(ctx context.Context, id int64) error {
 	query := `DELETE FROM pr.users WHERE id = $1`
 	_, err := s.db.ExecContext(ctx, query, id)
 	if err != nil {

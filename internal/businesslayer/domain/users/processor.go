@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -24,8 +25,10 @@ func NewProcessor(logger zerolog.Logger, usersCollection collections.Users) *Pro
 func (p *Processor) CreateIfNotExist(ctx context.Context, userRequest dto.User) error {
 	user, err := p.usersCollection.GetUserByChatID(ctx, userRequest.ChatID)
 	if err != nil {
-		p.logger.Err(err).Send()
-		return err
+		if !errors.Is(err, sql.ErrNoRows) {
+			p.logger.Err(err).Msg("Database error while fetching user")
+			return fmt.Errorf("failed to fetch user: %w", err)
+		}
 	}
 
 	if user == nil {
@@ -35,7 +38,6 @@ func (p *Processor) CreateIfNotExist(ctx context.Context, userRequest dto.User) 
 				ID:     uuid.New(),
 				Name:   userRequest.Name,
 				ChatID: userRequest.ChatID,
-				Role:   0,
 			},
 		); err != nil {
 			p.logger.Err(err).Send()

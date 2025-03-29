@@ -2,9 +2,7 @@ package collections
 
 import (
 	"context"
-	"database/sql"
 
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
 )
 
@@ -16,9 +14,8 @@ type (
 		DeleteUser(ctx context.Context, id int64) error
 	}
 	Reports interface {
-		NewReportsStorage(db *sql.DB) *postgres.ReportsStorage
 		GetReportsByChatID(ctx context.Context, ChatID int64) (*models.Reports, error)
 		SaveReport(ctx context.Context, report *models.Reports) error
-		GetUserReports(ctx context.Context, userID string)
+		GetUserReports(ctx context.Context, userID int64) ([]*models.Reports, error)
 	}
 )

@@ -19,13 +19,13 @@ func NewReportsStorage(db *sql.DB) *ReportsStorage {
 }
 
 // GetReportByID получает отчет по ID.
-func (s *ReportsStorage) GetReportsByID(ctx context.Context, id string) (*models.Reports, error) {
+func (s *ReportsStorage) GetReportsByChatID(ctx context.Context, ChatID int64) (*models.Reports, error) {
 	var report models.Reports
-	query := `SELECT id, user_id, date, request, response FROM pr.reports WHERE id = $1`
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&report.ID, &report.UserID, &report.Date, &report.Request, &report.Response)
+	query := `SELECT id, user_id, date, requestб response FROM pr.reports WHERE id = $1`
+	err := s.db.QueryRowContext(ctx, query, ChatID).Scan(&report.ID, &report.UserID, &report.Date, &report.Request, &report.Response)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("report with id %s not found", id)
+			return nil, fmt.Errorf("report with id %v not found", ChatID)
 		}
 		return nil, fmt.Errorf("failed to get report: %w", err)
 	}
@@ -46,7 +46,7 @@ func (s *ReportsStorage) SaveReport(ctx context.Context, report *models.Reports)
 }
 
 // GetUserReports получает все отчеты пользователя.
-func (s *ReportsStorage) GetUserReports(ctx context.Context, userID string) ([]*models.Reports, error) {
+func (s *ReportsStorage) GetUserReports(ctx context.Context, userID int64) ([]*models.Reports, error) {
 	query := `SELECT id, user_id, date, request, response FROM pr.reports WHERE user_id = $1`
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
