@@ -10,11 +10,10 @@ import (
 
 type (
 	Users interface {
-		NewUserStorage(db *sql.DB) *postgres.UserStorage
 		GetUserByChatID(ctx context.Context, ChatID int64) (*models.Users, error)
 		CreateUser(ctx context.Context, user *models.Users) error
 		UpdateUser(ctx context.Context, user *models.Users) error
-		DeleteUser(ctx context.Context, id string) error
+		DeleteUser(ctx context.Context, id int64) error
 	}
 	Reports interface {
 		NewReportsStorage(db *sql.DB) *postgres.ReportsStorage
