@@ -86,13 +86,11 @@ func main() {
 
 		return
 	}
-
 	if err := tgBot.SendMessage(adminChatID, "bot started"); err != nil {
 		logger.Err(err).Send()
 
 		return
 	}
-
 	if err := tgBot.Listen(ctx); err != nil {
 		logger.Err(err).Send()
 
@@ -101,7 +99,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		// Ждем сигнал остановки
 		<-stop
 		if err := tgBot.SendMessage(adminChatID, "bot "); err != nil {
 			logger.Err(err).Send()

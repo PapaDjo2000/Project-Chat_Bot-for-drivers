@@ -3,10 +3,36 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
 )
+
+var RequestKeyMapping = map[string]string{
+	"Tons":               "Тонны",
+	"Refuel":             "Заправка",
+	"Lifting":            "Подъемы",
+	"Backload":           "Обратная загрузка",
+	"Capacity":           "Вместимость Груза",
+	"Distance":           "Расстояние",
+	"Consumption":        "Расход топлива",
+	"FuelResidue":        "Остаток топлива",
+	"QuantityTrips":      "Количество рейсов",
+	"SpeedometerResidue": "Остаток спидометра",
+}
+
+var ResponseKeyMapping = map[string]string{
+	"UserId":            "ID пользователя",
+	"Lifting":           "Подъемы",
+	"Wastage":           "Расход на пробег",
+	"DailyRun":          "Суточный пробег",
+	"DailyRate":         "Суточная расход",
+	"TotalFuel":         "Общий расход топлива",
+	"Underfuel":         "Либо расход либо недостаток 3 действие",
+	"Undelivery":        "Недоставлено тонн",
+	"OperatingDistance": "Пройденное расстояние за день",
+}
 
 // ReportStorage предоставляет методы для работы с таблицей reports.
 type ReportsStorage struct {
@@ -18,7 +44,6 @@ func NewReportsStorage(db *sql.DB) *ReportsStorage {
 	return &ReportsStorage{db: db}
 }
 
-// GetReportByID получает отчет по ID.
 func (s *ReportsStorage) GetReportsByChatID(ctx context.Context, ChatID int64) (*models.Reports, error) {
 	var report models.Reports
 	query := `SELECT id, user_id, date, requestб response FROM pr.reports WHERE id = $1`
@@ -32,7 +57,6 @@ func (s *ReportsStorage) GetReportsByChatID(ctx context.Context, ChatID int64) (
 	return &report, nil
 }
 
-// SaveReport сохраняет новый отчет.
 func (s *ReportsStorage) SaveReport(ctx context.Context, report *models.Reports) error {
 	query := `
         INSERT INTO pr.reports (id, user_id, date, request, response)
@@ -45,7 +69,6 @@ func (s *ReportsStorage) SaveReport(ctx context.Context, report *models.Reports)
 	return nil
 }
 
-// GetUserReports получает все отчеты пользователя.
 func (s *ReportsStorage) GetUserReports(ctx context.Context, userID int64) ([]*models.Reports, error) {
 	query := `SELECT id, user_id, date, request, response FROM pr.reports WHERE user_id = $1`
 	rows, err := s.db.QueryContext(ctx, query, userID)
@@ -68,4 +91,38 @@ func (s *ReportsStorage) GetUserReports(ctx context.Context, userID int64) ([]*m
 	}
 
 	return reports, nil
+}
+func (s *ReportsStorage) DeleteUserReports(ctx context.Context, userID int64) error {
+	query := `DELETE FROM pr.reports WHERE user_id = $1`
+
+	result, err := s.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user reports: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no reports found for user_id: %d", userID)
+	}
+	return nil
+}
+
+func RenameKeys(data json.RawMessage, keyMapping map[string]string) (map[string]interface{}, error) {
+	var parsedData map[string]interface{}
+	if err := json.Unmarshal(data, &parsedData); err != nil {
+		return nil, err
+	}
+	renamedData := make(map[string]interface{})
+	for key, value := range parsedData {
+		newKey, exists := keyMapping[key]
+		if exists {
+			renamedData[newKey] = value
+		} else {
+			renamedData[key] = value
+		}
+	}
+	return renamedData, nil
 }

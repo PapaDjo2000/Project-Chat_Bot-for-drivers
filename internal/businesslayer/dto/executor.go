@@ -36,39 +36,64 @@ func NewVitalData() *VitalData {
 }
 
 func (v *VitalData) ToString(UserRequest UserRequest) string {
-	return fmt.Sprintf(
-		"Результаты расчета:\n"+
-			"Недотонны: %.1f\n"+
-			"Пройденное расстояние за день: %d км\n"+
-			"Расход топлива: %.1f л\n"+
-			"Подъемы: %.1f л\n"+
-			"Расход топлива на недовоз: %.1f л\n"+
-			"Общий расход топлива: %.1f л\n"+
-			"Остаток топлива на конец дня: %.1f л\n"+
-			"Пробег на конец дня: %d км\n"+
-			`=================
-			%v*%2.f=%1.f
-			%v*%1.f=%1.f
-			%1.f*%v*%v/100=%1.f
-			=================`,
-		v.Undelivery,
-		v.OperatingDistance, // остаётся int
-		v.Wastage,
-		v.Lifting,
-		v.Underfuel,
-		v.TotalFuel,
-		v.DailyRate,
-		v.DailyRun, // остаётся int
-		v.OperatingDistance,
-		UserRequest.Consumption,
-		v.Wastage,
-		UserRequest.QuantityTrips,
-		UserRequest.Lifting,
-		v.Lifting,
-		v.Undelivery,
-		UserRequest.QuantityTrips,
-		UserRequest.Distance,
-		v.Underfuel,
-	)
+	if UserRequest.Backload <= 0 {
+		return fmt.Sprintf(
+			"Результаты расчета:\n"+
+				"Пройденное расстояние за день: %d км\n"+
+				"Общий расход топлива: %g л\n"+
+				"Остаток топлива на конец дня: %g л\n"+
+				"Пробег на конец дня: %d км\n"+
+				`=================
+				Итог:
+				Расход на пробег:   %v*%g/100=%g
+				Pасход на подъемы:  %v*%g=%g
+				Pасход с недовоз : -%g*%v*%v/100=%g
+				=================`,
+
+			v.OperatingDistance,
+			v.TotalFuel,
+			v.DailyRate,
+			v.DailyRun,
+			v.OperatingDistance,
+			UserRequest.Consumption,
+			v.Wastage,
+			UserRequest.QuantityTrips,
+			UserRequest.Lifting,
+			v.Lifting,
+			v.Undelivery,
+			UserRequest.QuantityTrips,
+			UserRequest.Distance,
+			v.Underfuel,
+		)
+	} else {
+		return fmt.Sprintf(
+			"Результаты расчета:\n"+
+				"Пройденное расстояние за день: %d км\n"+
+				"Общий расход топлива: %g л\n"+
+				"Остаток топлива на конец дня: %g л\n"+
+				"Пробег на конец дня: %d км\n"+
+				`=================
+				Итог:
+				Расход на пробег:  %v*%g/100=%g
+				Pасход на подъемы: %v*%g=%g
+				Pасход c обратным: +%g*%v*%v/100=%g
+				=================`,
+
+			v.OperatingDistance,
+			v.TotalFuel,
+			v.DailyRate,
+			v.DailyRun,
+			v.OperatingDistance,
+			UserRequest.Consumption,
+			v.Wastage,
+			(UserRequest.QuantityTrips)*2,
+			UserRequest.Lifting,
+			v.Lifting,
+			v.Undelivery,
+			UserRequest.QuantityTrips,
+			UserRequest.Distance,
+			v.Underfuel,
+		)
+	}
 
 }

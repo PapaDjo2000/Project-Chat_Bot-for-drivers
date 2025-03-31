@@ -60,7 +60,7 @@ func (p *Processor) SendMessage(chatID int64, message string) error {
 
 func (p *Processor) Listen(ctx context.Context) error {
 	u := tgbotapi.NewUpdate(0)
-	//u.Timeout = math.MaxInt
+
 	updates := p.apiBot.GetUpdatesChan(u)
 
 	for {
@@ -68,7 +68,7 @@ func (p *Processor) Listen(ctx context.Context) error {
 		case <-ctx.Done():
 			p.logger.Debug().Msg("context is dode")
 			return nil
-		// закрытие контекста
+
 		case update := <-updates:
 			if update.Message == nil || update.Message.Text == "" {
 				continue
@@ -96,15 +96,15 @@ func (p *Processor) Listen(ctx context.Context) error {
 				go p.handleStart(ctx, update)
 			default:
 				switch update.Message.Text {
-				case "Посчитать":
-					// Запускаем процесс ввода данных для расчета
+				case "✏️Посчитать📝":
+
 					if !isChannelFound {
 						userChannel = make(chan tgbotapi.Update)
 						p.usersChannels[update.Message.Chat.ID] = userChannel
 					}
 					go p.handleWork(ctx, update, userChannel)
 
-				case "Выдать":
+				case "🫡Выдать данные📂":
 					if !p.isUserAuthorized(ctx, update.Message.Chat.ID) {
 						p.suggestToRunStartCommand(update.Message.Chat.ID, update.Message.Chat.UserName)
 						continue
@@ -143,13 +143,20 @@ func (p *Processor) Listen(ctx context.Context) error {
 							p.logger.Err(err).Send()
 						}
 					}
+				case "🗑Удалить мои данные!":
+					err := p.reportsCollection.DeleteUserReports(ctx, update.Message.Chat.ID)
+					if err != nil {
+						p.logger.Err(err).Send()
+					}
+					if err := p.SendMessage(update.Message.Chat.ID, "Твои данные удалены!"); err != nil {
+						p.logger.Err(err).Send()
+					}
 				}
 			}
 		}
 	}
 }
 func (p *Processor) handleStart(ctx context.Context, update tgbotapi.Update) {
-	// сохранить в базе
 	if err := p.usersProcessor.CreateIfNotExist(
 		ctx,
 		dto.User{
@@ -161,7 +168,6 @@ func (p *Processor) handleStart(ctx context.Context, update tgbotapi.Update) {
 		p.logger.Err(err).Send()
 		return
 	}
-	// приветствие
 	if err := p.SendMessage(update.Message.Chat.ID, fmt.Sprintf("Привет, %s!", update.Message.Chat.UserName)); err != nil {
 		p.logger.Err(err).Send()
 		return
@@ -175,7 +181,6 @@ func (p *Processor) suggestToRunStartCommand(chatID int64, userName string) {
 }
 
 func (p *Processor) isUserAuthorized(ctx context.Context, chatID int64) bool {
-	// проверить, что в базе есть такой пользователь
 	if _, err := p.usersProcessor.LoadByChatID(ctx, chatID); err != nil {
 		p.logger.Err(err).Send()
 		return false
@@ -189,293 +194,207 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 		close(userChannel)
 		delete(p.usersChannels, update.Message.Chat.ID)
 	}()
-
 	var request dto.UserRequest
-	var err error
-
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Введи расход:")
-	p.apiBot.Send(msg)
-
-	responseTimer := time.NewTimer(2 * time.Minute)
-	defer responseTimer.Stop()
-
-	select {
-	case <-ctx.Done():
-		p.logger.Debug().Msg("ctx is done")
-	case <-responseTimer.C:
-		p.logger.Debug().Msg("no response from user")
-		return
-	case response := <-userChannel:
-		for {
-			request.Consumption, err = strconv.ParseFloat(response.Message.Text, 64)
+	type Question struct {
+		Prompt       string
+		Handler      func(string) error
+		ResponseTime time.Duration
+	}
+	questions := []Question{
+		{"Введи расход:", func(input string) error {
+			value, err := strconv.ParseFloat(input, 64)
 			if err != nil {
-				msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-				if _, err := p.apiBot.Send(msg); err != nil {
-					p.logger.Err(err).Msg("failed to send error message")
-					return
-				}
-				p.logger.Debug().Msg("user entered incorrect Consumption value")
-				response = <-userChannel
-				continue
+				return fmt.Errorf("invalid input for consumption: %w", err)
 			}
-			break
-		}
-		msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Грузоподъемность:")
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Consumption = value
+			return nil
+		}, 2 * time.Minute},
+
+		{"Введи расход на подъемы:", func(input string) error {
+			value, err := strconv.ParseFloat(input, 64)
+			if err != nil {
+				return fmt.Errorf("invalid input for lifting: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Lifting = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Грузоподъемность:", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for capacity: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Capacity = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Остаток по спидометру:", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for speedometer residue: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.SpeedometerResidue = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Остаток топлива:", func(input string) error {
+			value, err := strconv.ParseFloat(input, 64)
+			if err != nil {
+				return fmt.Errorf("invalid input for fuel residue: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.FuelResidue = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Заправку:", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for refuel: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Refuel = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Расстояние в одну сторону:", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for distance: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Distance = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Желаемое кол-во рейсов:", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for quantity trips: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.QuantityTrips = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи количество тонн:", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for tons: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Tons = value
+			return nil
+		}, 1 * time.Minute},
+
+		{"Введи Обратные тонны (если нет то 0):", func(input string) error {
+			value, err := strconv.Atoi(input)
+			if err != nil {
+				return fmt.Errorf("invalid input for backload: %w", err)
+			}
+			if value < 0 {
+				return fmt.Errorf("value must be non-negative")
+			}
+			request.Backload = value
+			return nil
+		}, 1 * time.Minute},
+	}
+
+	processInput := func(question Question) bool {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, question.Prompt)
+		msg.ReplyMarkup = getCancel()
+
 		p.apiBot.Send(msg)
-		responseTimer.Reset(1 * time.Minute)
+
+		responseTimer := time.NewTimer(question.ResponseTime)
+		defer responseTimer.Stop()
 
 		select {
 		case <-ctx.Done():
 			p.logger.Debug().Msg("ctx is done")
+			return false
 		case <-responseTimer.C:
 			p.logger.Debug().Msg("no response from user")
-			return
-		case response = <-userChannel:
-			for {
-				request.Capacity, err = strconv.Atoi(response.Message.Text)
-				if err != nil {
-					msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-					if _, err := p.apiBot.Send(msg); err != nil {
-						p.logger.Err(err).Msg("failed to send error message")
-						return
-					}
-					p.logger.Debug().Msg("user entered incorrect Consumption value")
-					response = <-userChannel
-					continue
-				}
-				break
+			return false
+		case response := <-userChannel:
+			if response.Message.Text == "😬Отмена⚠️" {
+				msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Выберите действие:")
+				msg.ReplyMarkup = getGeneral()
+				p.apiBot.Send(msg)
+				return false
 			}
-			msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Остаток топлива:")
-			p.apiBot.Send(msg)
-			responseTimer.Reset(1 * time.Minute)
 
-			select {
-			case <-ctx.Done():
-				p.logger.Debug().Msg("ctx is done")
-			case <-responseTimer.C:
-				p.logger.Debug().Msg("no response from user")
-				return
-			case response = <-userChannel:
+			maxAttempts := 3
+			attempts := 0
 
-				for {
-					request.FuelResidue, err = strconv.ParseFloat(response.Message.Text, 64)
-					if err != nil {
-						msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-						if _, err := p.apiBot.Send(msg); err != nil {
-							p.logger.Err(err).Msg("failed to send error message")
-							return
-						}
-						p.logger.Debug().Msg("user entered incorrect Consumption value")
-						response = <-userChannel
-						continue
-					}
+			for {
+				attempts++
+				err := question.Handler(response.Message.Text)
+				if err == nil {
 					break
 				}
-				msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Остаток по спидометру:")
-				p.apiBot.Send(msg)
-				responseTimer.Reset(1 * time.Minute)
 
-				select {
-				case <-ctx.Done():
-					p.logger.Debug().Msg("ctx is done")
-				case <-responseTimer.C:
-					p.logger.Debug().Msg("no response from user")
-					return
-				case response = <-userChannel:
-
-					for {
-						request.SpeedometerResidue, err = strconv.Atoi(response.Message.Text)
-						if err != nil {
-							msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-							if _, err := p.apiBot.Send(msg); err != nil {
-								p.logger.Err(err).Msg("failed to send error message")
-								return
-							}
-							p.logger.Debug().Msg("user entered incorrect Consumption value")
-							response = <-userChannel
-							continue
-						}
-						break
-					}
-
-					msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Заправку:")
+				if attempts >= maxAttempts {
+					msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Слишком много некорректных попыток. Попробуйте позже.")
 					p.apiBot.Send(msg)
-					responseTimer.Reset(1 * time.Minute)
+					return false
+				}
 
-					select {
-					case <-ctx.Done():
-						p.logger.Debug().Msg("ctx is done")
-					case <-responseTimer.C:
-						p.logger.Debug().Msg("no response from user")
-						return
-					case response = <-userChannel:
+				msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число. Попробуйте снова:")
+				p.apiBot.Send(msg)
+				response = <-userChannel
 
-						for {
-							request.Refuel, err = strconv.Atoi(response.Message.Text)
-							if err != nil {
-								msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-								if _, err := p.apiBot.Send(msg); err != nil {
-									p.logger.Err(err).Msg("failed to send error message")
-									return
-								}
-								p.logger.Debug().Msg("user entered incorrect Consumption value")
-								response = <-userChannel
-								continue
-							}
-							break
-						}
-						msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Расстояние в одну сторону:")
-						p.apiBot.Send(msg)
-						responseTimer.Reset(1 * time.Minute)
-
-						select {
-						case <-ctx.Done():
-							p.logger.Debug().Msg("ctx is done")
-						case <-responseTimer.C:
-							p.logger.Debug().Msg("no response from user")
-							return
-						case response = <-userChannel:
-
-							for {
-								request.Distance, err = strconv.Atoi(response.Message.Text)
-								if err != nil {
-									msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-									if _, err := p.apiBot.Send(msg); err != nil {
-										p.logger.Err(err).Msg("failed to send error message")
-										return
-									}
-									p.logger.Debug().Msg("user entered incorrect Consumption value")
-									response = <-userChannel
-									continue
-								}
-								break
-							}
-							msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Желаемое кол-во рейсов:")
-							p.apiBot.Send(msg)
-							responseTimer.Reset(1 * time.Minute)
-
-							select {
-							case <-ctx.Done():
-								p.logger.Debug().Msg("ctx is done")
-							case <-responseTimer.C:
-								p.logger.Debug().Msg("no response from user")
-								return
-							case response = <-userChannel:
-								for {
-									request.QuantityTrips, err = strconv.Atoi(response.Message.Text)
-									if err != nil {
-										msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-										if _, err := p.apiBot.Send(msg); err != nil {
-											p.logger.Err(err).Msg("failed to send error message")
-											return
-										}
-										p.logger.Debug().Msg("user entered incorrect Consumption value")
-										response = <-userChannel
-										continue
-									}
-									break
-								}
-								msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи количество тонн:")
-								p.apiBot.Send(msg)
-								responseTimer.Reset(1 * time.Minute)
-
-								select {
-								case <-ctx.Done():
-									p.logger.Debug().Msg("ctx is done")
-								case <-responseTimer.C:
-									p.logger.Debug().Msg("no response from user")
-									return
-								case response = <-userChannel:
-
-									for {
-										request.Tons, err = strconv.Atoi(response.Message.Text)
-										if err != nil {
-											msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-											if _, err := p.apiBot.Send(msg); err != nil {
-												p.logger.Err(err).Msg("failed to send error message")
-												return
-											}
-											p.logger.Debug().Msg("user entered incorrect Consumption value")
-											response = <-userChannel
-											continue
-										}
-										break
-									}
-									msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи Обратные тонны (если нет то 0)")
-									p.apiBot.Send(msg)
-
-									responseTimer.Reset(1 * time.Minute)
-
-									select {
-									case <-ctx.Done():
-										p.logger.Debug().Msg("ctx is done")
-									case <-responseTimer.C:
-										p.logger.Debug().Msg("no response from user")
-										return
-									case response = <-userChannel:
-										for {
-											request.Backload, err = strconv.Atoi(response.Message.Text)
-											if err != nil {
-												msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-												if _, err := p.apiBot.Send(msg); err != nil {
-													p.logger.Err(err).Msg("failed to send error message")
-													return
-												}
-												p.logger.Debug().Msg("user entered incorrect Consumption value")
-												response = <-userChannel
-												continue
-											}
-											break
-										}
-										msg = tgbotapi.NewMessage(response.Message.Chat.ID, "Введи расход на подъемы:")
-										p.apiBot.Send(msg)
-
-										responseTimer.Reset(1 * time.Minute)
-
-										select {
-										case <-ctx.Done():
-											p.logger.Debug().Msg("ctx is done")
-										case <-responseTimer.C:
-											p.logger.Debug().Msg("no response from user")
-											return
-										case response = <-userChannel:
-											for {
-												request.Lifting, err = strconv.ParseFloat(response.Message.Text, 64)
-												if err != nil {
-													msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Должно быть число")
-													if _, err := p.apiBot.Send(msg); err != nil {
-														p.logger.Err(err).Msg("failed to send error message")
-														return
-													}
-													p.logger.Debug().Msg("user entered incorrect Consumption value")
-													response = <-userChannel
-													continue
-												}
-												break
-											}
-
-											vitaldata := p.executorProcessor.Calculate(request)
-											str := vitaldata.ToString(request)
-
-											msg := tgbotapi.NewMessage(response.Message.Chat.ID, str)
-											p.apiBot.Send(msg)
-
-											err = p.handleUserSaveReport(ctx, update, request, vitaldata)
-											if err != nil {
-												msg := tgbotapi.NewMessage(response.Message.Chat.ID, "No save")
-												p.apiBot.Send(msg)
-												p.logger.Err(err).Send()
-												return
-											}
-										}
-									}
-								}
-							}
-						}
-					}
+				if response.Message.Text == "😬Отмена⚠️" {
+					getGeneral()
+					return false
 				}
 			}
 		}
+		return true
+	}
+	for _, question := range questions {
+		if !processInput(question) {
+			return
+		}
+	}
+	vitaldata := p.executorProcessor.Calculate(request)
+	str := vitaldata.ToString(request)
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, str)
+	p.apiBot.Send(msg)
+
+	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+	msg.ReplyMarkup = getGeneral()
+	p.apiBot.Send(msg)
+
+	err := p.handleUserSaveReport(ctx, update, request, vitaldata)
+	if err != nil {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Не удалось сохранить данные.")
+		p.apiBot.Send(msg)
+		p.logger.Err(err).Send()
+		return
 	}
 }
 

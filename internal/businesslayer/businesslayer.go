@@ -15,7 +15,6 @@ type (
 	Users interface {
 		CreateIfNotExist(ctx context.Context, userRequest dto.User) error
 		LoadByChatID(ctx context.Context, chatID int64) (*dto.User, error)
-		Work(userName string) string
 	}
 	Executor interface {
 		Calculate(UserRequest dto.UserRequest) dto.VitalData

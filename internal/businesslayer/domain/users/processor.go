@@ -65,7 +65,3 @@ func (p *Processor) LoadByChatID(ctx context.Context, chatID int64) (*dto.User, 
 		ChatID: user.ChatID,
 	}, nil
 }
-
-func (p *Processor) Work(userName string) string {
-	return fmt.Sprintf("Дорогой %s, я работаю над этим", userName)
-}
