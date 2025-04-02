@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer"
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/domain/bot/keyboard"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/dto"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
@@ -89,7 +90,7 @@ func (p *Processor) Listen(ctx context.Context) error {
 					continue
 				}
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Добро пожаловать! Выберите действие:")
-				msg.ReplyMarkup = getGeneral()
+				msg.ReplyMarkup = keyboard.GetGeneral()
 				if _, err := p.apiBot.Send(msg); err != nil {
 					p.logger.Err(err).Send()
 				}
@@ -324,7 +325,7 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 
 	processInput := func(question Question) bool {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, question.Prompt)
-		msg.ReplyMarkup = getCancel()
+		msg.ReplyMarkup = keyboard.GetCancel()
 
 		p.apiBot.Send(msg)
 
@@ -341,7 +342,7 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 		case response := <-userChannel:
 			if response.Message.Text == "😬Отмена⚠️" {
 				msg := tgbotapi.NewMessage(response.Message.Chat.ID, "Выберите действие:")
-				msg.ReplyMarkup = getGeneral()
+				msg.ReplyMarkup = keyboard.GetGeneral()
 				p.apiBot.Send(msg)
 				return false
 			}
@@ -367,7 +368,7 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 				response = <-userChannel
 
 				if response.Message.Text == "😬Отмена⚠️" {
-					getGeneral()
+					keyboard.GetGeneral()
 					return false
 				}
 			}
@@ -386,7 +387,7 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 	p.apiBot.Send(msg)
 
 	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
-	msg.ReplyMarkup = getGeneral()
+	msg.ReplyMarkup = keyboard.GetGeneral()
 	p.apiBot.Send(msg)
 
 	err := p.handleUserSaveReport(ctx, update, request, vitaldata)

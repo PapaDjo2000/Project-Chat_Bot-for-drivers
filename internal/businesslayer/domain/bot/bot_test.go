@@ -2,156 +2,88 @@ package bot
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/bisinesslayer/domain/bot"
-	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/dto"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/rs/zerolog"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
-type MockBotAPI struct {
-	SendFunc func(msg tgbotapi.MessageConfig) (tgbotapi.Message, error)
-}
-type MockReportsCollection struct {
-	GetUserReportsFunc    func(ctx context.Context, userID int64) ([]*models.Reports, error)
-	DeleteUserReportsFunc func(ctx context.Context, userID int64) error
-	SaveReportFunc        func(ctx context.Context, report *models.Reports) error
+// TestDB реализует минимальный интерфейс sql.DB для тестов
+type TestDB struct {
+	queryRowResult *sql.Row
+	execError      error
 }
 
-func (m *MockReportsCollection) GetUserReports(ctx context.Context, userID int64) ([]*models.Reports, error) {
-	return m.GetUserReportsFunc(ctx, userID)
+func (db *TestDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return db.queryRowResult
 }
 
-func (m *MockReportsCollection) DeleteUserReports(ctx context.Context, userID int64) error {
-	return m.DeleteUserReportsFunc(ctx, userID)
+func (db *TestDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	if db.execError != nil {
+		return nil, db.execError
+	}
+	return &testResult{}, nil
 }
 
-func (m *MockReportsCollection) SaveReport(ctx context.Context, report *models.Reports) error {
-	return m.SaveReportFunc(ctx, report)
-}
-func (m *MockBotAPI) Send(msg tgbotapi.MessageConfig) (tgbotapi.Message, error) {
-	return m.SendFunc(msg)
+type testResult struct{}
+
+func (r *testResult) LastInsertId() (int64, error) {
+	return 1, nil
 }
 
-func TestSendMessage(t *testing.T) {
-	mockBot := &MockBotAPI{
-		SendFunc: func(msg tgbotapi.MessageConfig) (tgbotapi.Message, error) {
-			if msg.Text == "Test Message" {
-				return tgbotapi.Message{}, nil
+func (r *testResult) RowsAffected() (int64, error) {
+	return 1, nil
+}
+func TestReportsStorage_SaveReport(t *testing.T) {
+	tests := []struct {
+		name        string
+		db          *TestDB
+		report      *models.Reports
+		expectedErr bool
+	}{
+		{
+			name: "successful save",
+			db:   &TestDB{},
+			report: &models.Reports{
+				ID:       uuid.New(),
+				UserID:   123,
+				Date:     time.Now(),
+				Request:  json.RawMessage(`{"key":"value"}`),
+				Response: json.RawMessage(`{"key":"value"}`),
+			},
+			expectedErr: false,
+		},
+		{
+			name: "database error",
+			db: &TestDB{
+				execError: errors.New("database error"),
+			},
+			report: &models.Reports{
+				ID:       uuid.New(),
+				UserID:   123,
+				Date:     time.Now(),
+				Request:  json.RawMessage(`{"key":"value"}`),
+				Response: json.RawMessage(`{"key":"value"}`),
+			},
+			expectedErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := NewReportsStorage(tt.db)
+			err := storage.SaveReport(context.Background(), tt.report)
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			return tgbotapi.Message{}, errors.New("failed to send message")
-		},
-	}
-
-	logger := zerolog.New(nil)
-	processor := &bot.Processor{
-		apiBot: mockBot,
-		logger: logger,
-	}
-
-	err := processor.SendMessage(123456789, "Test Message")
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	err = processor.SendMessage(123456789, "Invalid Message")
-	if err == nil {
-		t.Fatalf("Expected an error, got nil")
-	}
-}
-func TestHandleWork(t *testing.T) {
-	mockBot := &MockBotAPI{
-		SendFunc: func(msg tgbotapi.MessageConfig) (tgbotapi.Message, error) {
-			return tgbotapi.Message{}, nil
-		},
-	}
-
-	mockUsersProcessor := &MockUsersProcessor{}
-	mockExecutorProcessor := &MockExecutorProcessor{}
-	mockReportsCollection := &MockReportsCollection{}
-
-	logger := zerolog.New(nil)
-	processor := &bot.Processor{
-		apiBot:            mockBot,
-		logger:            logger,
-		usersProcessor:    mockUsersProcessor,
-		executorProcessor: mockExecutorProcessor,
-		reportsCollection: mockReportsCollection,
-		usersChannels:     make(map[int64]chan tgbotapi.Update),
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	userChannel := make(chan tgbotapi.Update, 10)
-	update := tgbotapi.Update{
-		Message: &tgbotapi.Message{
-			Chat: &tgbotapi.Chat{ID: 123456789},
-		},
-	}
-
-	go func() {
-		userChannel <- tgbotapi.Update{
-			Message: &tgbotapi.Message{Text: "10"},
-		}
-		userChannel <- tgbotapi.Update{
-			Message: &tgbotapi.Message{Text: "5000"},
-		}
-		close(userChannel)
-	}()
-
-	processor.handleWork(ctx, update, userChannel)
-
-	// Проверяем, что данные были обработаны корректно
-	if len(processor.usersChannels) != 0 {
-		t.Fatalf("Expected usersChannels to be empty, got %d", len(processor.usersChannels))
-	}
-}
-
-type MockReportsCollection struct {
-	SaveReportFunc func(ctx context.Context, report *models.Reports) error
-}
-
-func (m *MockReportsCollection) SaveReport(ctx context.Context, report *models.Reports) error {
-	return m.SaveReportFunc(ctx, report)
-}
-
-func TestHandleUserSaveReport(t *testing.T) {
-	mockReportsCollection := &MockReportsCollection{
-		SaveReportFunc: func(ctx context.Context, report *models.Reports) error {
-			if report.UserID != 123456789 {
-				return errors.New("invalid user ID")
-			}
-			return nil
-		},
-	}
-
-	logger := zerolog.New(nil)
-	processor := &bot.Processor{
-		reportsCollection: mockReportsCollection,
-		logger:            logger,
-	}
-
-	ctx := context.Background()
-	update := tgbotapi.Update{
-		Message: &tgbotapi.Message{
-			Chat: &tgbotapi.Chat{ID: 123456789},
-		},
-	}
-
-	request := dto.UserRequest{
-		Consumption: 10.5,
-		Capacity:    5000,
-	}
-	vitaldata := dto.VitalData{
-		Result: "Success",
-	}
-
-	err := processor.handleUserSaveReport(ctx, update, request, vitaldata)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		})
 	}
 }

@@ -1,31 +1,49 @@
 # Project-Chat_Bot-for-drivers
 Автоматизация путевых листов: чат-бот для водителей
 .
-├── cmd
-│   └── app
+├── cmd/
+│   └── app/
 │       └── main.go
-├── internal
-│   ├── businesslayer
-│   │   ├── bot
-│   │   │   └── processor.go
-│   │   ├── reports
-│   │   │   └── processor.go
-│   │   └── users
-│   │       └── processor.go
-│   ├── datalayer
-│   │   ├── collections
-│   │   │   └── postgres
-│   │   │       ├── user.go
-│   │   │       └── report.go
-│   │   ├── models
-│   │   │   ├── user.go
-│   │   │   └── report.go
-│   │   └── storage.go
-├── migrations
+│       └── ChatBot
+├── internal/
+│   ├── businesslayer/
+│   │     └── domain/
+│   │     │     ├── bot/
+│   │     │     │    ├── keyboard/
+│   │     │     │    │    │── buttons_test.go 
+│   │     │     │    │    └── buttons.go
+│   │     │     │    │── bot.go
+│   │     │     │    └── bot_test.go
+│   │     │     │
+│   │     │     └── users/
+│   │     │           ├── processor_test.go
+│   │     │           └── processor.go
+│   │     │
+│   │     ├── dto/
+│   │     │    ├── executor_test.go
+│   │     │    ├── executor.go
+│   │     │    └── users.go
+│   │     └── executor/
+│   │     │      ├── processor_test.go
+│   │     │      └── processor.go
+│   │     └── businesslayer.go
+│   │
+│   └── datalayer/
+│         ├── collections/
+│         │   ├── postgres/
+│         │   │     ├── user.go
+│         │   │     ├── reports_test.go
+│         │   │     └── report.go
+│         │   └── storage.go
+│         └──  models/
+│               ├── user.go
+│               ├── report.go
+│               └── vitaldata.go
+├── migrations/
 │   ├── 000001_create_users_table.up.sql
 │   └── 000001_create_users_table.down.sql
-├── config
-│   └── config.yml
+├── config/
+├── pkg/  
 ├── docker-compose.yml
 ├── Dockerfile
 ├── .env.example

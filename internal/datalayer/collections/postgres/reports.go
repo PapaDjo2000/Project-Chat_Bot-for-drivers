@@ -34,12 +34,10 @@ var ResponseKeyMapping = map[string]string{
 	"OperatingDistance": "Пройденное расстояние за день",
 }
 
-// ReportStorage предоставляет методы для работы с таблицей reports.
 type ReportsStorage struct {
 	db *sql.DB
 }
 
-// NewReportStorage создает новый экземпляр ReportStorage.
 func NewReportsStorage(db *sql.DB) *ReportsStorage {
 	return &ReportsStorage{db: db}
 }

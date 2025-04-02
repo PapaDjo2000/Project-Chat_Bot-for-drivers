@@ -1,8 +1,8 @@
-package bot
+package keyboard
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-func getGeneral() tgbotapi.ReplyKeyboardMarkup {
+func GetGeneral() tgbotapi.ReplyKeyboardMarkup {
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("✏️Посчитать📝"),
@@ -16,7 +16,7 @@ func getGeneral() tgbotapi.ReplyKeyboardMarkup {
 	return keyboard
 }
 
-func getCancel() tgbotapi.ReplyKeyboardMarkup {
+func GetCancel() tgbotapi.ReplyKeyboardMarkup {
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("😬Отмена⚠️"),
