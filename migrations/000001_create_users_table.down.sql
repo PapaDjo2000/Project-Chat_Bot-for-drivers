@@ -1,1 +1,2 @@
-drop table pr.users, pr.reports;
+DROP TABLE IF EXISTS pr.users;
+DROP SCHEMA IF EXISTS pr CASCADE;
