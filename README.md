@@ -22,8 +22,7 @@
 .
 ├── cmd/
 │   └── app/
-│       └── main.go
-│       └── ChatBot
+│       └── main.go       
 ├── internal/
 │   ├── businesslayer/
 │   │   ├── domain/
@@ -60,13 +59,13 @@
 │           ├── report.go
 │           └── vitaldata.go
 ├── migrations/
-│   ├── 000001_create_users_table.up.sql
-│   └── 000001_create_users_table.down.sql
-├── config/
-├── pkg/
+│      ├── 000001_create_users_table.up.sql
+│      └── 000001_create_users_table.down.sql
 ├── docker-compose.yml
 ├── Dockerfile
 ├── .env.example
 ├── go.mod
-└── go.sum
-```
+├── go.sum
+├── .gitignore
+├── READMI.md
+└── .golangci.yaml

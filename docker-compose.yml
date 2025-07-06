@@ -3,16 +3,29 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
+    env_file:
+      - .env
     container_name: chatbot_db
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5433:5432"
+      - ${DB_PORT}:${DB_PORT}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+
+  migrate:
+   image: migrate/migrate
+   container_name: migrate
+   volumes:
+    - ./migrations:/migrations
+   command: >
+    migrate -database postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable -path /migrations up
+   depends_on:
+    - db
+   entrypoint: ["sh", "-c", "sleep 10 && migrate -database postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable -path /migrations up"]
 
   app:
     build:
@@ -25,12 +38,13 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-      DB_HOST: db
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       ADMIN_CHAT_ID: ${ADMIN_CHAT_ID}
     depends_on:
       - db
+      - migrate
     restart: always
 
 volumes:
