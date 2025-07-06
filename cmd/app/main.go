@@ -15,15 +15,9 @@ import (
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/executor"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
 	"github.com/joho/godotenv"
-
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 )
-
-// tgBot - @BotFather
-// @GetMyChatID_BestBot
-
-// THIS VALUES SHOULD BE IN CONFIG/ENV FILE
 
 func main() {
 	err := godotenv.Load("../../.env")

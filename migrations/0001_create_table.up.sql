@@ -1,3 +1,12 @@
+CREATE SCHEMA IF NOT EXISTS pr;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS pr.users (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    chat_id BIGINT NOT NULL UNIQUE
+);
+
 CREATE TABLE IF NOT EXISTS pr.reports (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES pr.users (chat_id) ON DELETE CASCADE,

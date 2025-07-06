@@ -17,8 +17,7 @@ ChatBot for Drivers — это Telegram-бот, который помогает 
 .
 ├── cmd/
 │   └── app/
-│       └── main.go
-│       └── ChatBot
+│       └── main.go       
 ├── internal/
 │   ├── businesslayer/
 │   │     ├── domain/
@@ -56,10 +55,11 @@ ChatBot for Drivers — это Telegram-бот, который помогает 
 ├── migrations/
 │      ├── 000001_create_users_table.up.sql
 │      └── 000001_create_users_table.down.sql
-├── config/
-├── pkg/  
 ├── docker-compose.yml
 ├── Dockerfile
 ├── .env.example
 ├── go.mod
-└── go.sum
+├── go.sum
+├── .gitignore
+├── READMI.md
+└── .golangci.yaml

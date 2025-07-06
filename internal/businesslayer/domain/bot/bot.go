@@ -13,7 +13,6 @@ import (
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/collections/postgres"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -51,6 +50,7 @@ func New(
 		usersChannels:     make(map[int64]chan tgbotapi.Update),
 	}, nil
 }
+
 func (p *Processor) SendMessage(chatID int64, message string) error {
 	msg := tgbotapi.NewMessage(chatID, message)
 	if _, err := p.apiBot.Send(msg); err != nil {
@@ -76,7 +76,6 @@ func (p *Processor) Listen(ctx context.Context) error {
 			}
 			userChannel, isChannelFound := p.usersChannels[update.Message.Chat.ID]
 			if isChannelFound {
-
 				go func() {
 					userChannel <- update
 				}()
@@ -157,6 +156,7 @@ func (p *Processor) Listen(ctx context.Context) error {
 		}
 	}
 }
+
 func (p *Processor) handleStart(ctx context.Context, update tgbotapi.Update) {
 	if err := p.usersProcessor.CreateIfNotExist(
 		ctx,
@@ -380,17 +380,16 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 			return
 		}
 	}
-	vitaldata := p.executorProcessor.Calculate(request)
-	str := vitaldata.ToString(request)
+	vd := p.executorProcessor.Calculate(request)
+	str := vd.ToString(request)
 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, str)
-	p.apiBot.Send(msg)
 
 	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 	msg.ReplyMarkup = keyboard.GetGeneral()
 	p.apiBot.Send(msg)
 
-	err := p.handleUserSaveReport(ctx, update, request, vitaldata)
+	err := p.uSaveRep(ctx, update, request, vd)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Не удалось сохранить данные.")
 		p.apiBot.Send(msg)
@@ -399,16 +398,16 @@ func (p *Processor) handleWork(ctx context.Context, update tgbotapi.Update, user
 	}
 }
 
-func (p *Processor) handleUserSaveReport(ctx context.Context, update tgbotapi.Update, request dto.UserRequest, vitaldata dto.VitalData) error {
-	requestData, err := json.Marshal(request)
+func (p *Processor) uSaveRep(ctx context.Context, update tgbotapi.Update, req dto.UserRequest, vd dto.VitalData) error {
+	requestData, err := json.Marshal(req)
 	if err != nil {
-		p.logger.Err(err).Msg("Failed to marshal request data")
-		return fmt.Errorf("failed to marshal request data: %w", err)
+		p.logger.Err(err).Msg("Failed to marshal req data")
+		return fmt.Errorf("failed to marshal req data: %w", err)
 	}
-	vataldata, err := json.Marshal(vitaldata)
+	vataldata, err := json.Marshal(vd)
 	if err != nil {
-		p.logger.Err(err).Msg("Failed to marshal request data")
-		return fmt.Errorf("failed to marshal request data: %w", err)
+		p.logger.Err(err).Msg("Failed to marshal req data")
+		return fmt.Errorf("failed to marshal req data: %w", err)
 	}
 	report := &models.Reports{
 		ID:       uuid.New(),
