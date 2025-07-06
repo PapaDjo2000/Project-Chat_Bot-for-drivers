@@ -67,5 +67,5 @@
 ├── go.mod
 ├── go.sum
 ├── .gitignore
-├── READMI.md
+├── README.md
 └── .golangci.yaml
