@@ -20,7 +20,7 @@ type UserRequest struct {
 }
 
 type VitalData struct {
-	UserId            uuid.UUID
+	UserID            uuid.UUID
 	Undelivery        float64
 	OperatingDistance int
 	Wastage           float64
@@ -35,8 +35,8 @@ func NewVitalData() *VitalData {
 	return &VitalData{}
 }
 
-func (v *VitalData) ToString(UserRequest UserRequest) string {
-	if UserRequest.Backload <= 0 {
+func (v *VitalData) ToString(userRequest UserRequest) string {
+	if userRequest.Backload <= 0 {
 		return fmt.Sprintf(
 			`Результаты расчета:
 			Пройденное расстояние за день: %d км
@@ -55,19 +55,19 @@ func (v *VitalData) ToString(UserRequest UserRequest) string {
 			v.DailyRate,
 			v.DailyRun,
 			v.OperatingDistance,
-			UserRequest.Consumption,
+			userRequest.Consumption,
 			v.Wastage,
-			UserRequest.QuantityTrips,
-			UserRequest.Lifting,
+			userRequest.QuantityTrips,
+			userRequest.Lifting,
 			v.Lifting,
 			v.Undelivery,
-			UserRequest.QuantityTrips,
-			UserRequest.Distance,
+			userRequest.QuantityTrips,
+			userRequest.Distance,
 			v.Underfuel,
 		)
-	} else {
-		return fmt.Sprintf(
-			`Результаты расчета:
+	}
+	return fmt.Sprintf(
+		`Результаты расчета:
 			Пройденное расстояние за день: %d км
 			Общий расход топлива: %g л
 			Остаток топлива на конец дня: %g л
@@ -79,21 +79,19 @@ func (v *VitalData) ToString(UserRequest UserRequest) string {
 			Pасход c обратным: +%g*%v*%v/100=%g
 			=================`,
 
-			v.OperatingDistance,
-			v.TotalFuel,
-			v.DailyRate,
-			v.DailyRun,
-			v.OperatingDistance,
-			UserRequest.Consumption,
-			v.Wastage,
-			(UserRequest.QuantityTrips)*2,
-			UserRequest.Lifting,
-			v.Lifting,
-			v.Undelivery,
-			UserRequest.QuantityTrips,
-			UserRequest.Distance,
-			v.Underfuel,
-		)
-	}
-
+		v.OperatingDistance,
+		v.TotalFuel,
+		v.DailyRate,
+		v.DailyRun,
+		v.OperatingDistance,
+		userRequest.Consumption,
+		v.Wastage,
+		(userRequest.QuantityTrips)*2,
+		userRequest.Lifting,
+		v.Lifting,
+		v.Undelivery,
+		userRequest.QuantityTrips,
+		userRequest.Distance,
+		v.Underfuel,
+	)
 }

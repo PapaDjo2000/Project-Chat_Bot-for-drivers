@@ -9,17 +9,14 @@ import (
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
 )
 
-// UserStorage предоставляет методы для работы с таблицей users.
 type UserStorage struct {
 	db *sql.DB
 }
 
-// NewUserStorage создает новый экземпляр UserStorage.
 func NewUserStorage(db *sql.DB) *UserStorage {
 	return &UserStorage{db: db}
 }
 
-// GetUserByID получает пользователя по ID.
 func (s *UserStorage) GetUserByChatID(ctx context.Context, id int64) (*models.Users, error) {
 	var user models.Users
 	query := `SELECT id, name, chat_id FROM pr.users WHERE Chat_ID = $1`
@@ -33,7 +30,6 @@ func (s *UserStorage) GetUserByChatID(ctx context.Context, id int64) (*models.Us
 	return &user, nil
 }
 
-// CreateUser создает нового пользователя.
 func (s *UserStorage) CreateUser(ctx context.Context, user *models.Users) error {
 	query := `
         INSERT INTO pr.users (id, name, chat_id)
@@ -46,7 +42,6 @@ func (s *UserStorage) CreateUser(ctx context.Context, user *models.Users) error 
 	return nil
 }
 
-// UpdateUser обновляет данные пользователя.
 func (s *UserStorage) UpdateUser(ctx context.Context, user *models.Users) error {
 	query := `
         UPDATE pr.users
@@ -60,7 +55,6 @@ func (s *UserStorage) UpdateUser(ctx context.Context, user *models.Users) error 
 	return nil
 }
 
-// DeleteUser удаляет пользователя по ID.
 func (s *UserStorage) DeleteUser(ctx context.Context, id int64) error {
 	query := `DELETE FROM pr.users WHERE id = $1`
 	_, err := s.db.ExecContext(ctx, query, id)

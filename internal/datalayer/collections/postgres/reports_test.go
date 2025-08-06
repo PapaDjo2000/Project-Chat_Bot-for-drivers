@@ -5,91 +5,105 @@ import (
 	"database/sql"
 	"encoding/json"
 	"testing"
+	"time"
 
+	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	"github.com/stretchr/testify/require"
 )
 
-// Настройка тестовой базы данных
-func setupTestDB(t *testing.T) (*sql.DB, func()) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open database: %v", err)
-	}
-
-	// Создание таблицы users
-	_, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            chat_id BIGINT NOT NULL UNIQUE
-        );
-    `)
-	if err != nil {
-		t.Fatalf("failed to create table 'users': %v", err)
-	}
-
-	// Создание таблицы reports
-	_, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY,
-            user_id BIGINT NOT NULL,
-            date TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
-            request TEXT,
-            response TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(chat_id) ON DELETE CASCADE
-        );
-    `)
-	if err != nil {
-		t.Fatalf("failed to create table 'reports': %v", err)
-	}
-
-	// Функция очистки
-	cleanup := func() {
-		db.Close()
-	}
-
-	return db, cleanup
-}
-
-// Тесты
-func TestReportsStorage_GetReportsByChatID(t *testing.T) {
+func TestReportsStorage(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	storage := NewReportsStorage(db)
-
 	ctx := context.Background()
-	reportID := int64(1)
+
 	userID := int64(123)
-	date := "2023-10-01 12:00:00"
+	reportID := uuid.New()
+	date := time.Now().UTC().Truncate(time.Second)
 	request := json.RawMessage(`{"Tons": 5, "Refuel": 10}`)
 	response := json.RawMessage(`{"TotalFuel": 20}`)
 
-	// Вставка тестового пользователя
-	_, err := db.Exec(`INSERT INTO users (id, name, chat_id) VALUES (?, ?, ?)`, userID, "John Doe", userID)
-	assert.NoError(t, err)
+	_, err := db.Exec(`INSERT INTO users (id, name, chat_id) VALUES ($1, $2, $3)`,
+		userID, "Test User", userID)
+	require.NoError(t, err)
 
-	// Вставка тестового отчета
-	_, err = db.Exec(
-		`INSERT INTO reports (id, user_id, date, request, response) VALUES (?, ?, ?, ?, ?)`,
-		reportID, userID, date, request, response,
-	)
-	assert.NoError(t, err)
+	t.Run("SaveReport success", func(t *testing.T) {
+		report := &models.Reports{
+			ID:       reportID,
+			UserID:   userID,
+			Date:     date,
+			Request:  request,
+			Response: response,
+		}
 
-	// Успешный запрос
-	report, err := storage.GetReportsByChatID(ctx, reportID)
-	assert.NoError(t, err)
-	assert.NotNil(t, report)
-	assert.Equal(t, reportID, report.ID)
-	assert.Equal(t, userID, report.UserID)
-	assert.Equal(t, date, report.Date)
-	assert.Equal(t, request, report.Request)
-	assert.Equal(t, response, report.Response)
+		err := storage.SaveReport(ctx, report)
+		assert.NoError(t, err)
+	})
 
-	// Запрос несуществующего отчета
-	_, err = storage.GetReportsByChatID(ctx, 999)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
+	t.Run("GetReportsByChatID success", func(t *testing.T) {
+		report, err := storage.GetReportsByChatID(ctx, userID)
+		require.NoError(t, err)
+
+		assert.Equal(t, reportID, report.ID)
+		assert.Equal(t, userID, report.UserID)
+		assert.Equal(t, date.UTC(), report.Date.UTC())
+		assert.JSONEq(t, string(request), string(report.Request))
+		assert.JSONEq(t, string(response), string(report.Response))
+	})
+
+	t.Run("GetUserReports success", func(t *testing.T) {
+		reports, err := storage.GetUserReports(ctx, userID)
+		require.NoError(t, err)
+		require.Len(t, reports, 1)
+
+		assert.Equal(t, reportID, reports[0].ID)
+	})
+
+	t.Run("DeleteUserReports success", func(t *testing.T) {
+		err := storage.DeleteUserReports(ctx, userID)
+		assert.NoError(t, err)
+
+		reports, err := storage.GetUserReports(ctx, userID)
+		assert.NoError(t, err)
+		assert.Empty(t, reports)
+	})
+
+	t.Run("GetReportsByChatID not found", func(t *testing.T) {
+		_, err := storage.GetReportsByChatID(ctx, 999)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func setupTestDB(t *testing.T) (*sql.DB, func()) {
+	t.Helper()
+	connStr := "postgres://user:pass@localhost/test_db?sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id BIGINT PRIMARY KEY,
+			name TEXT,
+			chat_id BIGINT
+		);
+		
+		CREATE TABLE IF NOT EXISTS pr.reports (
+			id UUID PRIMARY KEY,
+			user_id BIGINT REFERENCES users(id),
+			date TIMESTAMP,
+			request JSONB,
+			response JSONB
+		);
+	`)
+	require.NoError(t, err)
+
+	return db, func() {
+		db.Exec("DROP TABLE IF EXISTS pr.reports")
+		db.Exec("DROP TABLE IF EXISTS users")
+		db.Close()
+	}
 }
