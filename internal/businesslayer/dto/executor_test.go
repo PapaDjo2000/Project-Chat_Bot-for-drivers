@@ -17,7 +17,7 @@ func TestVitalData_ToString(t *testing.T) {
 		{
 			name: "1",
 			vitalData: &VitalData{
-				UserId:            uuid.New(),
+				UserID:            uuid.New(),
 				Undelivery:        10.0,
 				OperatingDistance: 200,
 				Wastage:           16.0,
@@ -54,7 +54,7 @@ func TestVitalData_ToString(t *testing.T) {
 		{
 			name: "2",
 			vitalData: &VitalData{
-				UserId:            uuid.New(),
+				UserID:            uuid.New(),
 				Undelivery:        5.0,
 				OperatingDistance: 150,
 				Wastage:           15.0,

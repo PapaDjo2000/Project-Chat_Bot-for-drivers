@@ -3,7 +3,7 @@ package models
 import "github.com/google/uuid"
 
 type VitalData struct {
-	UserId            uuid.UUID
+	UserID            uuid.UUID
 	Undelivery        float64
 	OperatingDistance int
 	Wastage           float64

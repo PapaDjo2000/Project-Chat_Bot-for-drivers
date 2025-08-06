@@ -42,13 +42,14 @@ func NewReportsStorage(db *sql.DB) *ReportsStorage {
 	return &ReportsStorage{db: db}
 }
 
-func (s *ReportsStorage) GetReportsByChatID(ctx context.Context, ChatID int64) (*models.Reports, error) {
+func (s *ReportsStorage) GetReportsByChatID(ctx context.Context, chatID int64) (*models.Reports, error) {
 	var report models.Reports
 	query := `SELECT id, user_id, date, requestб response FROM pr.reports WHERE id = $1`
-	err := s.db.QueryRowContext(ctx, query, ChatID).Scan(&report.ID, &report.UserID, &report.Date, &report.Request, &report.Response)
+	err := s.db.QueryRowContext(ctx, query, chatID).Scan(&report.ID,
+		&report.UserID, &report.Date, &report.Request, &report.Response)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("report with id %v not found", ChatID)
+			return nil, fmt.Errorf("report with id %v not found", chatID)
 		}
 		return nil, fmt.Errorf("failed to get report: %w", err)
 	}
@@ -90,6 +91,7 @@ func (s *ReportsStorage) GetUserReports(ctx context.Context, userID int64) ([]*m
 
 	return reports, nil
 }
+
 func (s *ReportsStorage) DeleteUserReports(ctx context.Context, userID int64) error {
 	query := `DELETE FROM pr.reports WHERE user_id = $1`
 

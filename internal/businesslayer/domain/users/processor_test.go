@@ -9,13 +9,11 @@ import (
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/businesslayer/dto"
 	"github.com/PapaDjo2000/Project-Chat_Bot-for-drivers/internal/datalayer/models"
 	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
-// Реализация Users с использованием SQLite
 type SQLiteUsers struct {
 	db *sql.DB
 }
@@ -24,10 +22,10 @@ func NewSQLiteUsers(db *sql.DB) *SQLiteUsers {
 	return &SQLiteUsers{db: db}
 }
 
-func (s *SQLiteUsers) GetUserByChatID(ctx context.Context, ChatID int64) (*models.Users, error) {
+func (s *SQLiteUsers) GetUserByChatID(ctx context.Context, chatID int64) (*models.Users, error) {
 	var user models.Users
 	query := `SELECT id, name, chat_id FROM users WHERE chat_id = ?`
-	err := s.db.QueryRowContext(ctx, query, ChatID).Scan(&user.ID, &user.Name, &user.ChatID)
+	err := s.db.QueryRowContext(ctx, query, chatID).Scan(&user.ID, &user.Name, &user.ChatID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -43,23 +41,20 @@ func (s *SQLiteUsers) CreateUser(ctx context.Context, user *models.Users) error 
 	return err
 }
 
-func (s *SQLiteUsers) UpdateUser(ctx context.Context, user *models.Users) error {
+func (s *SQLiteUsers) UpdateUser(_ context.Context, _ *models.Users) error {
 	panic("not implemented")
 }
 
-func (s *SQLiteUsers) DeleteUser(ctx context.Context, id int64) error {
+func (s *SQLiteUsers) DeleteUser(_ context.Context, _ int64) error {
 	panic("not implemented")
 }
 
-// Настройка тестовой базы данных
 func setupTestDB(t *testing.T) (*sql.DB, func()) {
-	// Открываем SQLite в памяти
+	t.Helper()
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
-
-	// Создаем таблицу users
 	_, err = db.Exec(`
         CREATE TABLE users (
             id TEXT PRIMARY KEY,
@@ -71,7 +66,6 @@ func setupTestDB(t *testing.T) (*sql.DB, func()) {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
-	// Функция очистки
 	cleanup := func() {
 		db.Close()
 	}
@@ -79,7 +73,6 @@ func setupTestDB(t *testing.T) (*sql.DB, func()) {
 	return db, cleanup
 }
 
-// Тесты
 func TestProcessor_CreateIfNotExist_UserExists(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
@@ -96,8 +89,8 @@ func TestProcessor_CreateIfNotExist_UserExists(t *testing.T) {
 		ChatID: chatID,
 	}
 
-	// Вставка существующего пользователя
-	_, err := db.Exec(`INSERT INTO users (id, name, chat_id) VALUES (?, ?, ?)`, existingUser.ID, existingUser.Name, existingUser.ChatID)
+	_, err := db.Exec(`INSERT INTO users (id, name, chat_id) VALUES (?, ?, ?)`,
+		existingUser.ID, existingUser.Name, existingUser.ChatID)
 	assert.NoError(t, err)
 
 	userRequest := dto.User{
@@ -108,7 +101,6 @@ func TestProcessor_CreateIfNotExist_UserExists(t *testing.T) {
 	err = processor.CreateIfNotExist(ctx, userRequest)
 	assert.NoError(t, err)
 
-	// Проверка, что пользователь не был создан повторно
 	var count int
 	err = db.QueryRow(`SELECT COUNT(*) FROM users WHERE chat_id = ?`, chatID).Scan(&count)
 	assert.NoError(t, err)
@@ -133,7 +125,6 @@ func TestProcessor_CreateIfNotExist_UserDoesNotExist(t *testing.T) {
 	err := processor.CreateIfNotExist(ctx, userRequest)
 	assert.NoError(t, err)
 
-	// Проверка, что пользователь был создан
 	var count int
 	err = db.QueryRow(`SELECT COUNT(*) FROM users WHERE chat_id = ?`, chatID).Scan(&count)
 	assert.NoError(t, err)
@@ -156,8 +147,9 @@ func TestProcessor_LoadByChatID_UserFound(t *testing.T) {
 		ChatID: chatID,
 	}
 
-	// Вставка существующего пользователя
-	_, err := db.Exec(`INSERT INTO users (id, name, chat_id) VALUES (?, ?, ?)`, existingUser.ID, existingUser.Name, existingUser.ChatID)
+	_, err := db.Exec(`INSERT INTO users 
+	(id, name, chat_id) VALUES (?, ?, ?)`,
+		existingUser.ID, existingUser.Name, existingUser.ChatID)
 	assert.NoError(t, err)
 
 	user, err := processor.LoadByChatID(ctx, chatID)

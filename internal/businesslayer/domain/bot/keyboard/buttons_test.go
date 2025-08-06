@@ -16,11 +16,11 @@ func Test(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-
+		t.Run(tC.desc, func(_ *testing.T) {
 		})
 	}
 }
+
 func Test_GetGeneral(t *testing.T) {
 	keyboard := GetGeneral()
 	assert.IsType(t, tgbotapi.ReplyKeyboardMarkup{}, keyboard)
